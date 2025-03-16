@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard IoT - Tema Kayu Cerah</title>
+  
+  <!-- ApexCharts Library -->
+  <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+  <!-- MQTT.js Library -->
+  <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+  
+  <style>
+    /* --- Tema Kayu Cerah & Layout Dasar --- */
+    body { 
+      font-family: 'Arial', sans-serif; 
+      background: url('https://www.publicdomainpictures.net/pictures/40000/velka/wood-texture-background.jpg') no-repeat center center fixed;
+      background-size: cover;
+      padding: 20px;
+      text-align: center;
+      color: #4E342E;
+    }
+    h1, h2 {
+      color: #3E2723;
+      text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+    }
+    .section {
+      margin-bottom: 40px;
+    }
+    .dashboard {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 20px;
+    }
+    .card {
+      background: rgba(255, 245, 235, 0.9);
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 6px 12px rgba(0, 0, 0, 0.4);
+      border: 2px solid #6D4C41;
+    }
+    .card h3 {
+      margin-bottom: 10px;
+      color: #5D4037;
+    }
+
+    /* --- Bagian Tombol Light 1-4 --- */
+    .light-container {
+      display: flex;
+      justify-content: center;
+      gap: 15px;
+      flex-wrap: wrap;
+      margin-bottom: 40px;
+    }
+    .light-card {
+      width: 70px;
+      height: 70px;
+      border-radius: 15px;
+      background: #5D4037;       /* Warna default OFF */
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      cursor: pointer;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.4);
+      transition: background 0.3s;
+    }
+    .light-card.on {
+      background: #FF9800;       /* Warna jika ON */
+    }
+    .light-icon {
+      width: 48px;
+      height: 48px;
+    }
+    .light-label {
+      margin-top: 8px;  /* Jarak antara ikon dan label */
+      font-size: 12px;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <h1>Dashboard IoT - Tema Kayu Cerah</h1>
+  
+  <!-- Flammable Gas Section -->
+  <div class="section">
+    <h2>🔥 Flammable Gas</h2>
+    <div class="dashboard">
+      <div class="card">
+        <h3>LPG</h3>
+        <div id="gauge-lpg"></div>
+      </div>
+      <div class="card">
+        <h3>Metana</h3>
+        <div id="gauge-metana"></div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Toxic Gas Section -->
+  <div class="section">
+    <h2>☣️ Toxic Gas</h2>
+    <div class="dashboard">
+      <div class="card">
+        <h3>NOx</h3>
+        <div id="gauge-nox"></div>
+      </div>
+      <div class="card">
+        <h3>Amonia</h3>
+        <div id="gauge-amonia"></div>
+      </div>
+      <div class="card">
+        <h3>Alkohol</h3>
+        <div id="gauge-alkohol"></div>
+      </div>
+      <div class="card">
+        <h3>CO2</h3>
+        <div id="gauge-co2"></div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Temperature Section -->
+  <div class="section">
+    <h2>🌡️ Temperature</h2>
+    <div class="dashboard">
+      <div class="card">
+        <h3>Suhu (°C)</h3>
+        <div id="gauge-suhu"></div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Light Control Section -->
+  <div class="light-container">
+    <div class="light-card" id="light1" onclick="toggleLight(1)">
+      <svg class="light-icon" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="8" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="32" y1="8" x2="32" y2="24"/>
+        <path d="M44 20 A20 20 0 1 1 20 20"/>
+      </svg>
+      <div class="light-label">Light 1</div>
+    </div>
+    <div class="light-card" id="light2" onclick="toggleLight(2)">
+      <svg class="light-icon" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="8" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="32" y1="8" x2="32" y2="24"/>
+        <path d="M44 20 A20 20 0 1 1 20 20"/>
+      </svg>
+      <div class="light-label">Light 2</div>
+    </div>
+    <div class="light-card" id="light3" onclick="toggleLight(3)">
+      <svg class="light-icon" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="8" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="32" y1="8" x2="32" y2="24"/>
+        <path d="M44 20 A20 20 0 1 1 20 20"/>
+      </svg>
+      <div class="light-label">Light 3</div>
+    </div>
+    <div class="light-card" id="light4" onclick="toggleLight(4)">
+      <svg class="light-icon" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="8" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="32" y1="8" x2="32" y2="24"/>
+        <path d="M44 20 A20 20 0 1 1 20 20"/>
+      </svg>
+      <div class="light-label">Light 4</div>
+    </div>
+  </div>
+  
+  <script>
+    // Fungsi untuk inisialisasi gauge menggunakan ApexCharts
+    function initGauge(selector) {
+      return new ApexCharts(document.querySelector(selector), {
+        chart: { type: 'radialBar', height: 250 },
+        plotOptions: {
+          radialBar: {
+            startAngle: -90,
+            endAngle: 90,
+            hollow: { size: '60%' },
+            track: { background: '#FFF3E0' },
+            dataLabels: {
+              name: { show: false },
+              value: {
+                formatter: function(val) { return val === 0 ? "null" : val; },
+                fontSize: '24px',
+                color: '#4E342E'
+              }
+            }
+          }
+        },
+        fill: { colors: ['#FF9800'] },
+        series: [0]
+      });
+    }
+    
+    // Inisialisasi gauge dan simpan referensinya
+    var gaugeLPG = initGauge("#gauge-lpg");
+    gaugeLPG.render();
+    
+    var gaugeMetana = initGauge("#gauge-metana");
+    gaugeMetana.render();
+    
+    var gaugeNOx = initGauge("#gauge-nox");
+    gaugeNOx.render();
+    
+    var gaugeAmonia = initGauge("#gauge-amonia");
+    gaugeAmonia.render();
+    
+    var gaugeAlkohol = initGauge("#gauge-alkohol");
+    gaugeAlkohol.render();
+    
+    var gaugeCO2 = initGauge("#gauge-co2");
+    gaugeCO2.render();
+    
+    var gaugeSuhu = initGauge("#gauge-suhu");
+    gaugeSuhu.render();
+    
+    // Fungsi toggle untuk light control
+    function toggleLight(lightNumber) {
+      const card = document.getElementById(`light${lightNumber}`);
+      if (card.classList.contains('on')) {
+        card.classList.remove('on');
+        console.log(`Light ${lightNumber} is OFF`);
+      } else {
+        card.classList.add('on');
+        console.log(`Light ${lightNumber} is ON`);
+      }
+      // TODO: Integrasi dengan MQTT jika diperlukan
+    }
+    
+    // Koneksi ke HiveMQ menggunakan MQTT.js dengan username dan password
+    const client = mqtt.connect("d58d2856910f44d9a1e8ef55cebf8e63.s1.eu.hivemq.cloud:8884/mqtt", {
+      username: "Farhan",
+      password: "Farhan_gaming20"
+    });
+    
+    client.on("connect", function() {
+      console.log("Connected to HiveMQ with credentials");
+      client.subscribe("sensors/data", function(err) {
+        if (!err) {
+          console.log("Subscribed to sensors/data");
+        }
+      });
+    });
+    
+    // Update gauge saat pesan MQTT diterima
+    client.on("message", function(topic, message) {
+      try {
+        const data = JSON.parse(message.toString());
+        if (typeof data.lpg !== "undefined") gaugeLPG.updateSeries([data.lpg]);
+        if (typeof data.metana !== "undefined") gaugeMetana.updateSeries([data.metana]);
+        if (typeof data.nox !== "undefined") gaugeNOx.updateSeries([data.nox]);
+        if (typeof data.amonia !== "undefined") gaugeAmonia.updateSeries([data.amonia]);
+        if (typeof data.alkohol !== "undefined") gaugeAlkohol.updateSeries([data.alkohol]);
+        if (typeof data.co2 !== "undefined") gaugeCO2.updateSeries([data.co2]);
+        if (typeof data.suhu !== "undefined") gaugeSuhu.updateSeries([data.suhu]);
+      } catch (e) {
+        console.error("Error parsing MQTT message:", e);
+      }
+    });
+  </script>
+</body>
+</html>
