@@ -43,7 +43,6 @@
       margin-bottom: 10px;
       color: #5D4037;
     }
-
     /* --- Bagian Tombol Light 1-4 --- */
     .light-container {
       display: flex;
@@ -164,6 +163,12 @@
     </div>
   </div>
   
+  <!-- Section untuk menampilkan grafik data sensor yang melebihi threshold -->
+  <div class="section">
+    <h2>Grafik Data Sensor (Melebihi Batas)</h2>
+    <div id="thresholdChart"></div>
+  </div>
+  
   <script>
     // Fungsi untuk inisialisasi gauge menggunakan ApexCharts
     function initGauge(selector) {
@@ -212,17 +217,62 @@
     var gaugeSuhu = initGauge("#gauge-suhu");
     gaugeSuhu.render();
     
-    // Fungsi toggle untuk light control
+    // Inisialisasi array untuk menyimpan data sensor yang melebihi batas
+    var thresholdData = [];
+    
+    // Inisialisasi grafik untuk data sensor dengan tipe 'line' dan sumbu waktu
+    var thresholdChart = new ApexCharts(document.querySelector("#thresholdChart"), {
+      chart: {
+        type: 'line',
+        height: 300,
+        animations: {
+          enabled: true,
+          easing: 'linear',
+          dynamicAnimation: {
+            speed: 1000
+          }
+        }
+      },
+      series: [{
+        name: 'Nilai Sensor',
+        data: thresholdData
+      }],
+      xaxis: {
+        type: 'datetime',
+        labels: {
+          datetimeUTC: false,
+          format: 'dd MMM HH:mm'
+        }
+      },
+      title: {
+        text: 'Data Sensor Melebihi Batas'
+      }
+    });
+    thresholdChart.render();
+    
+    // Fungsi toggle untuk light control dengan integrasi MQTT untuk mengendalikan relay ESP32
     function toggleLight(lightNumber) {
       const card = document.getElementById(`light${lightNumber}`);
+      let state;
       if (card.classList.contains('on')) {
         card.classList.remove('on');
+        state = "OFF";
         console.log(`Light ${lightNumber} is OFF`);
       } else {
         card.classList.add('on');
+        state = "ON";
         console.log(`Light ${lightNumber} is ON`);
       }
-      // TODO: Integrasi dengan MQTT jika diperlukan
+      // Publikasi pesan MQTT untuk relay (jika diperlukan)
+      const topic = `esp32/relay/${lightNumber}`;
+      const payload = JSON.stringify({ relay: lightNumber, state: state });
+      client.publish(topic, payload, function(err) {
+        if(err) {
+          console.error("Gagal mempublikasikan pesan:", err);
+        } else {
+          console.log(`Pesan diterbitkan ke ${topic}: ${payload}`);
+        }
+      });
     }
     
     // Koneksi ke HiveMQ menggunakan MQTT.js dengan username dan password
@@ -240,12 +290,29 @@
       });
     });
     
-    // Update gauge saat pesan MQTT diterima
+    // Update gauge dan grafik saat pesan MQTT diterima
     client.on("message", function(topic, message) {
       try {
         const data = JSON.parse(message.toString());
-        if (typeof data.lpg !== "undefined") gaugeLPG.updateSeries([data.lpg]);
-        if (typeof data.metana !== "undefined") gaugeMetana.updateSeries([data.metana]);
+        // Update gauge masing-masing sensor
+        if (typeof data.lpg !== "undefined") {
+          gaugeLPG.updateSeries([data.lpg]);
+          // Jika nilai LPG melebihi threshold (misal 50), simpan data dengan timestamp
+          if (data.lpg > 50) {
+            let timestamp = new Date();
+            thresholdData.push([timestamp.getTime(), data.lpg]);
+            thresholdChart.updateSeries([{ data: thresholdData }]);
+          }
+        }
+        if (typeof data.metana !== "undefined") {
+          gaugeMetana.updateSeries([data.metana]);
+          // Contoh threshold untuk metana
+          if (data.metana > 50) {
+            let timestamp = new Date();
+            thresholdData.push([timestamp.getTime(), data.metana]);
+            thresholdChart.updateSeries([{ data: thresholdData }]);
+          }
+        }
         if (typeof data.nox !== "undefined") gaugeNOx.updateSeries([data.nox]);
         if (typeof data.amonia !== "undefined") gaugeAmonia.updateSeries([data.amonia]);
         if (typeof data.alkohol !== "undefined") gaugeAlkohol.updateSeries([data.alkohol]);
