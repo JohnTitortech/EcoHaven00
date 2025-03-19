@@ -1,14 +1,17 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>EcoHaven</title>
   
   <!-- ApexCharts Library -->
   <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
   <!-- MQTT.js Library -->
   <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+  <!-- Firebase (versi compat untuk kemudahan integrasi) -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
   
   <style>
     /* --- Tema Kayu Cerah & Layout Dasar --- */
@@ -73,7 +76,7 @@
       height: 48px;
     }
     .light-label {
-      margin-top: 8px;  /* Jarak antara ikon dan label */
+      margin-top: 8px;
       font-size: 12px;
       text-align: center;
     }
@@ -163,21 +166,48 @@
     </div>
   </div>
   
-  <!-- Section untuk menampilkan grafik data sensor yang melebihi threshold (Threshold Chart dari snippet kedua) -->
+  <!-- Grafik Threshold Chart (data sensor melebihi threshold) -->
   <div class="section">
     <h2>Grafik Data Sensor (Melebihi Batas)</h2>
     <div id="thresholdChart"></div>
   </div>
   
-  <!-- Section untuk menampilkan grafik data sensor berdasarkan batas sensor (Alert Chart dari snippet pertama) -->
+  <!-- Grafik Alert Chart (data sensor berdasarkan batas sensor) -->
   <div class="section">
     <h2>Grafik Data Sensor Alert</h2>
     <div id="alertChart"></div>
   </div>
   
   <script>
-    /********************* KODE DARI SNIPPET PERTAMA *********************/
-    // Menyimpan data jika melebihi batas sensor (alertChart)
+    /********************* KONFIGURASI FIREBASE *********************/
+    // Ganti konfigurasi berikut dengan konfigurasi project Firebase Anda.
+    const firebaseConfig = {
+      apiKey: "YOUR_API_KEY",
+      authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+      databaseURL: "https://YOUR_PROJECT_ID-default-rtdb.firebaseio.com",
+      projectId: "YOUR_PROJECT_ID",
+      storageBucket: "YOUR_PROJECT_ID.appspot.com",
+      messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+      appId: "YOUR_APP_ID"
+    };
+    
+    firebase.initializeApp(firebaseConfig);
+    const database = firebase.database();
+    
+    // Fungsi untuk menyimpan data ke Firebase
+    function saveState(key, data) {
+      database.ref(key).set(data);
+    }
+    
+    // Fungsi untuk memuat data dari Firebase dan menjalankan callback saat data berubah
+    function loadState(key, callback) {
+      database.ref(key).on('value', (snapshot) => {
+        callback(snapshot.val());
+      });
+    }
+    
+    /********************* KONFIGURASI ALERT CHART *********************/
+    // Data sensor yang melebihi batas (alertChart)
     let alertData = [];
     
     // Batas maksimum sensor
@@ -191,8 +221,9 @@
       suhu: 25
     };
     
-    // Fungsi untuk memperbarui grafik alertChart
-    function updateChart() {
+    // Inisialisasi chart instance
+    let alertChartInstance = null;
+    function updateAlertChart() {
       const labels = alertData.map(d => d.timestamp);
       const seriesData = Object.keys(limits).map(sensor => ({
         name: sensor.toUpperCase(),
@@ -205,12 +236,15 @@
         series: seriesData
       };
     
-      const chart = new ApexCharts(document.querySelector("#alertChart"), options);
-      chart.render();
+      if (alertChartInstance) {
+        alertChartInstance.updateOptions(options);
+      } else {
+        alertChartInstance = new ApexCharts(document.querySelector("#alertChart"), options);
+        alertChartInstance.render();
+      }
     }
     
-    /********************* KODE DARI SNIPPET KEDUA *********************/
-    // Fungsi untuk inisialisasi gauge menggunakan ApexCharts
+    /********************* KONFIGURASI GAUGE & THRESHOLD CHART *********************/
     function initGauge(selector) {
       return new ApexCharts(document.querySelector(selector), {
         chart: { type: 'radialBar', height: 250 },
@@ -235,32 +269,24 @@
       });
     }
     
-    // Inisialisasi gauge untuk masing-masing sensor
+    // Inisialisasi gauge untuk sensor
     var gaugeLPG = initGauge("#gauge-lpg");
     gaugeLPG.render();
-    
     var gaugeMetana = initGauge("#gauge-metana");
     gaugeMetana.render();
-    
     var gaugeNOx = initGauge("#gauge-nox");
     gaugeNOx.render();
-    
     var gaugeAmonia = initGauge("#gauge-amonia");
     gaugeAmonia.render();
-    
     var gaugeAlkohol = initGauge("#gauge-alkohol");
     gaugeAlkohol.render();
-    
     var gaugeCO2 = initGauge("#gauge-co2");
     gaugeCO2.render();
-    
     var gaugeSuhu = initGauge("#gauge-suhu");
     gaugeSuhu.render();
     
-    // Inisialisasi array untuk menyimpan data sensor yang melebihi threshold (thresholdChart)
-    var thresholdData = [];
-    
-    // Inisialisasi grafik untuk data sensor (thresholdChart)
+    // Data untuk thresholdChart (nilai sensor melebihi threshold)
+    let thresholdData = [];
     var thresholdChart = new ApexCharts(document.querySelector("#thresholdChart"), {
       chart: {
         type: 'line',
@@ -268,42 +294,36 @@
         animations: {
           enabled: true,
           easing: 'linear',
-          dynamicAnimation: {
-            speed: 1000
-          }
+          dynamicAnimation: { speed: 1000 }
         }
       },
-      series: [{
-        name: 'Nilai Sensor',
-        data: thresholdData
-      }],
+      series: [{ name: 'Nilai Sensor', data: thresholdData }],
       xaxis: {
         type: 'datetime',
-        labels: {
-          datetimeUTC: false,
-          format: 'dd MMM HH:mm'
-        }
+        labels: { datetimeUTC: false, format: 'dd MMM HH:mm' }
       },
-      title: {
-        text: 'Data Sensor Melebihi Batas'
-      }
+      title: { text: 'Data Sensor Melebihi Batas' }
     });
     thresholdChart.render();
     
-    // Fungsi toggle untuk light control dengan integrasi MQTT untuk mengendalikan relay ESP32
+    /********************* LIGHT CONTROL *********************/
+    // Fungsi toggle untuk light control
     function toggleLight(lightNumber) {
       const card = document.getElementById(`light${lightNumber}`);
       let state;
+      // Ambil status tombol dari Firebase
+      let lightsState = window.lightsState || { light1: "OFF", light2: "OFF", light3: "OFF", light4: "OFF" };
       if (card.classList.contains('on')) {
         card.classList.remove('on');
         state = "OFF";
-        console.log(`Light ${lightNumber} is OFF`);
       } else {
         card.classList.add('on');
         state = "ON";
-        console.log(`Light ${lightNumber} is ON`);
       }
-      // Publikasi pesan MQTT untuk relay (jika diperlukan)
+      lightsState['light' + lightNumber] = state;
+      saveState('lightsState', lightsState);
+      
+      // Publikasi pesan MQTT untuk relay
       const topic = `esp32/relay/${lightNumber}`;
       const payload = JSON.stringify({ relay: lightNumber, state: state });
       client.publish(topic, payload, function(err) {
@@ -315,7 +335,22 @@
       });
     }
     
-    // Koneksi ke HiveMQ menggunakan MQTT.js dengan username dan password
+    // Fungsi untuk memuat status tombol light dari Firebase
+    function loadLightsState() {
+      loadState('lightsState', (data) => {
+        window.lightsState = data || { light1: "OFF", light2: "OFF", light3: "OFF", light4: "OFF" };
+        for (let i = 1; i <= 4; i++) {
+          const card = document.getElementById(`light${i}`);
+          if (window.lightsState['light' + i] === "ON") {
+            card.classList.add('on');
+          } else {
+            card.classList.remove('on');
+          }
+        }
+      });
+    }
+    
+    /********************* MQTT CONNECTION & MESSAGE HANDLING *********************/
     const client = mqtt.connect("wss://d58d2856910f44d9a1e8ef55cebf8e63.s1.eu.hivemq.cloud:8884/mqtt", {
       username: "Farhan",
       password: "Farhan_gaming20"
@@ -330,7 +365,7 @@
       });
     });
     
-    // Gabungkan kedua fungsi update gauge dan update grafik ke dalam satu event handler MQTT
+    // Event handler MQTT: Update gauge, thresholdChart, dan alertChart serta simpan data ke Firebase
     client.on("message", function(topic, message) {
       try {
         const data = JSON.parse(message.toString());
@@ -340,20 +375,20 @@
         if (typeof data.lpg !== "undefined") {
           gaugeLPG.updateSeries([data.lpg]);
           if (data.lpg > limits.lpg) exceeded = true;
-          // Jika nilai LPG melebihi threshold (misal 50), simpan data dengan timestamp di thresholdChart
           if (data.lpg > 50) {
             let ts = new Date();
             thresholdData.push([ts.getTime(), data.lpg]);
+            saveState('thresholdData', thresholdData);
             thresholdChart.updateSeries([{ data: thresholdData }]);
           }
         }
         if (typeof data.metana !== "undefined") {
           gaugeMetana.updateSeries([data.metana]);
           if (data.metana > limits.metana) exceeded = true;
-          // Contoh threshold untuk metana
           if (data.metana > 50) {
             let ts = new Date();
             thresholdData.push([ts.getTime(), data.metana]);
+            saveState('thresholdData', thresholdData);
             thresholdChart.updateSeries([{ data: thresholdData }]);
           }
         }
@@ -380,12 +415,28 @@
         
         if (exceeded) {
           alertData.push({ ...data, timestamp });
-          updateChart();
+          saveState('alertData', alertData);
+          updateAlertChart();
         }
       } catch (e) {
         console.error("Error parsing MQTT message:", e);
       }
     });
+    
+    // Muat data yang tersimpan dari Firebase saat halaman dimuat
+    loadState('alertData', (data) => {
+      if (data) { 
+        alertData = data;
+        updateAlertChart();
+      }
+    });
+    loadState('thresholdData', (data) => {
+      if (data) {
+        thresholdData = data;
+        thresholdChart.updateSeries([{ data: thresholdData }]);
+      }
+    });
+    loadLightsState();
   </script>
 </body>
 </html>
