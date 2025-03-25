@@ -80,6 +80,41 @@
       font-size: 12px;
       text-align: center;
     }
+    
+    /* Media Query untuk tampilan mobile */
+    @media screen and (max-width: 768px) {
+      body {
+        padding: 10px;
+      }
+      .dashboard {
+        grid-template-columns: 1fr;
+        gap: 15px;
+      }
+      .card {
+        padding: 15px;
+        margin-bottom: 20px;
+      }
+      .light-container {
+        gap: 10px;
+      }
+      .light-card {
+        width: 60px;
+        height: 60px;
+      }
+      .light-icon {
+        width: 36px;
+        height: 36px;
+      }
+      .light-label {
+        font-size: 10px;
+      }
+      h1 {
+        font-size: 24px;
+      }
+      h2 {
+        font-size: 20px;
+      }
+    }
   </style>
 </head>
 <body>
@@ -182,13 +217,13 @@
     /********************* KONFIGURASI FIREBASE *********************/
     // Ganti konfigurasi berikut dengan konfigurasi project Firebase Anda.
     const firebaseConfig = {
-    apiKey: "AIzaSyAK3Lm-A2NTeW92HwPvOFnKhaq0cx9tjGQ",
-    authDomain: "ecohaven-36953.firebaseapp.com",
-    databaseURL: "https://ecohaven-36953-default-rtdb.asia-southeast1.firebasedatabase.app",
-    projectId: "ecohaven-36953",
-    storageBucket: "ecohaven-36953.firebasestorage.app",
-    messagingSenderId: "378716661675",
-    appId: "1:378716661675:web:d4e0a565f1cb6fe0d094ee"
+      apiKey: "AIzaSyAK3Lm-A2NTeW92HwPvOFnKhaq0cx9tjGQ",
+      authDomain: "ecohaven-36953.firebaseapp.com",
+      databaseURL: "https://ecohaven-36953-default-rtdb.asia-southeast1.firebasedatabase.app",
+      projectId: "ecohaven-36953",
+      storageBucket: "ecohaven-36953.firebasestorage.app",
+      messagingSenderId: "378716661675",
+      appId: "1:378716661675:web:d4e0a565f1cb6fe0d094ee"
     };
     
     firebase.initializeApp(firebaseConfig);
@@ -375,7 +410,7 @@
         if (typeof data.lpg !== "undefined") {
           gaugeLPG.updateSeries([data.lpg]);
           if (data.lpg > limits.lpg) exceeded = true;
-          if (data.lpg > 50) {
+          // Contoh threshold: untuk LPG jika nilai melebihi 50 (contoh nilai tambahan)\n          if (data.lpg > 50) {
             let ts = new Date();
             thresholdData.push([ts.getTime(), data.lpg]);
             saveState('thresholdData', thresholdData);
