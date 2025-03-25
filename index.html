@@ -81,22 +81,15 @@
       text-align: center;
     }
     
-    /* Media Query untuk tampilan mobile */
+    /* Media Query khusus untuk tampilan mobile */
     @media screen and (max-width: 768px) {
       body {
         padding: 10px;
       }
-      .dashboard {
-        grid-template-columns: 1fr;
-        gap: 15px;
-      }
-      .card {
-        padding: 15px;
-        margin-bottom: 20px;
-      }
-      .light-container {
-        gap: 10px;
-      }
+      /* Ubah ukuran font judul saja, tidak mengubah grid dan ukuran card utama */
+      h1 { font-size: 24px; }
+      h2 { font-size: 20px; }
+      /* Atur ulang tombol light agar lebih kecil pada mobile */
       .light-card {
         width: 60px;
         height: 60px;
@@ -107,12 +100,6 @@
       }
       .light-label {
         font-size: 10px;
-      }
-      h1 {
-        font-size: 24px;
-      }
-      h2 {
-        font-size: 20px;
       }
     }
   </style>
@@ -410,7 +397,8 @@
         if (typeof data.lpg !== "undefined") {
           gaugeLPG.updateSeries([data.lpg]);
           if (data.lpg > limits.lpg) exceeded = true;
-          // Contoh threshold: untuk LPG jika nilai melebihi 50 (contoh nilai tambahan)\n          if (data.lpg > 50) {
+          // Contoh threshold: untuk LPG jika nilai melebihi 50 (contoh nilai tambahan)
+          if (data.lpg > 50) {
             let ts = new Date();
             thresholdData.push([ts.getTime(), data.lpg]);
             saveState('thresholdData', thresholdData);
