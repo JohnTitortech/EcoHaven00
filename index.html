@@ -179,209 +179,64 @@
   </div>
   
   <script>
-    /********************* KONFIGURASI FIREBASE *********************/
-    const firebaseConfig = {
-      apiKey: "AIzaSyAK3Lm-A2NTeW92HwPvOFnKhaq0cx9tjGQ",
-      authDomain: "ecohaven-36953.firebaseapp.com",
-      databaseURL: "https://ecohaven-36953-default-rtdb.asia-southeast1.firebasedatabase.app",
-      projectId: "ecohaven-36953",
-      storageBucket: "ecohaven-36953.firebasestorage.app",
-      messagingSenderId: "378716661675",
-      appId: "1:378716661675:web:d4e0a565f1cb6fe0d094ee"
-    };
-    firebase.initializeApp(firebaseConfig);
-    const database = firebase.database();
-    
-    function saveState(key, data) {
-      database.ref(key).set(data);
-    }
-    
-    function loadState(key, callback) {
-      database.ref(key).on('value', (snapshot) => {
-        callback(snapshot.val());
-      });
-    }
-
-    /********************* KONFIGURASI ALERT CHART *********************/
-    let alertData = [];
-    
+    // Limit untuk sensor
     const limits = {
-      lpg: 0.001,
-      metana: 0.005,
-      CO: 0.001,
-      amonia: 0.001,
-      alkohol: 0.001,
-      co2: 0.001,
-      suhu: 35
+      lpg: 100,      // batas LPG
+      metana: 50,    // batas Metana
+      nox: 100,      // batas NOx
+      amonia: 50,    // batas Amonia
+      alkohol: 20,   // batas Alkohol
+      co2: 1000,     // batas CO2
+      suhu: 30       // batas Suhu (°C)
     };
 
-    let alertChartInstance = null;
-    function updateAlertChart() {
-      const labels = alertData.map(d => d.timestamp);
-      const seriesData = Object.keys(limits).map(sensor => ({
-        name: sensor.toUpperCase(),
-        data: alertData.map(d => d[sensor] || 0)
-      }));
-
-      const options = {
-        chart: { type: 'line', height: 300 },
-        xaxis: { categories: labels },
-        series: seriesData
-      };
-
-      if (alertChartInstance) {
-        alertChartInstance.updateOptions(options);
-      } else {
-        alertChartInstance = new ApexCharts(document.querySelector("#alertChart"), options);
-        alertChartInstance.render();
-      }
-    }
-    
-    /********************* KONFIGURASI GAUGE & THRESHOLD CHART *********************/
-    function initGauge(selector) {
-      return new ApexCharts(document.querySelector(selector), {
-        chart: { type: 'radialBar', height: 250 },
-        plotOptions: {
-          radialBar: {
-            startAngle: -90,
-            endAngle: 90,
-            hollow: { size: '60%' },
-            track: { background: '#FFF3E0' },
-            dataLabels: {
-              name: { show: false },
-              value: {
-                formatter: function(val) { return val === 0 ? "null" : val; },
-                fontSize: '24px',
-                color: '#4E342E'
-              }
-            }
-          }
-        },
-        fill: { colors: ['#FF9800'] },
-        series: [0]
-      });
-    }
-
-    var gaugeLPG = initGauge("#gauge-lpg");
-    gaugeLPG.render();
-    var gaugeMetana = initGauge("#gauge-metana");
-    gaugeMetana.render();
-    var gaugeCO = initGauge("#gauge-CO");
-    gaugeCO.render();
-    var gaugeAmonia = initGauge("#gauge-amonia");
-    gaugeAmonia.render();
-    var gaugeAlkohol = initGauge("#gauge-alkohol");
-    gaugeAlkohol.render();
-    var gaugeCO2 = initGauge("#gauge-co2");
-    gaugeCO2.render();
-    var gaugeSuhu = initGauge("#gauge-suhu");
-    gaugeSuhu.render();
-    
     let thresholdData = [];
-    var thresholdChart = new ApexCharts(document.querySelector("#thresholdChart"), {
+    let alertData = [];
+
+    const saveState = (key, value) => {
+      localStorage.setItem(key, JSON.stringify(value));
+    };
+
+    const loadState = (key, callback) => {
+      const data = localStorage.getItem(key);
+      if (data) {
+        callback(JSON.parse(data));
+      } else {
+        callback(null);
+      }
+    };
+
+    const optionsThresholdChart = {
       chart: {
         type: 'line',
-        height: 300,
-        animations: {
-          enabled: true,
-          easing: 'linear',
-          dynamicAnimation: { speed: 1000 }
-        }
+        height: 350,
+        zoom: { enabled: false },
+        toolbar: { show: false }
       },
-      series: [{ name: 'Nilai Sensor', data: thresholdData }],
-      xaxis: {
-        type: 'datetime',
-        labels: { datetimeUTC: false, format: 'dd MMM HH:mm' }
-      },
-      title: { text: 'Data Sensor Melebihi Batas' }
-    });
-    thresholdChart.render();
-    
-    /********************* LIGHT CONTROL *********************/
-    function toggleLight(lightNumber) {
-      const card = document.getElementById(`light${lightNumber}`);
-      let state;
-      let lightsState = window.lightsState || { light1: "OFF", light2: "OFF", light3: "OFF", light4: "OFF" };
-      if (card.classList.contains('on')) {
-        card.classList.remove('on');
-        state = "OFF";
-      } else {
-        card.classList.add('on');
-        state = "ON";
-      }
-      lightsState['light' + lightNumber] = state;
-      saveState('lightsState', lightsState);
-      
-      const topic = `esp32/relay/${lightNumber}`;
-      const payload = JSON.stringify({ relay: lightNumber, state: state });
-      client.publish(topic, payload, function(err) {
-        if(err) {
-          console.error("Gagal mempublikasikan pesan:", err);
-        } else {
-          console.log(`Pesan diterbitkan ke ${topic}: ${payload}`);
-        }
-      });
-    }
+      series: [{ name: 'Threshold Data', data: thresholdData }],
+      xaxis: { type: 'datetime' },
+      yaxis: { title: { text: 'Value' } },
+      title: { text: 'Threshold Sensor Data', align: 'center' }
+    };
 
-    function loadLightsState() {
-      loadState('lightsState', (data) => {
-        window.lightsState = data || { light1: "OFF", light2: "OFF", light3: "OFF", light4: "OFF" };
-        for (let i = 1; i <= 4; i++) {
-          const card = document.getElementById(`light${i}`);
-          if (window.lightsState[`light${i}`] === 'ON') {
-            card.classList.add('on');
-          }
-        }
-      });
-    }
+    const optionsAlertChart = {
+      chart: {
+        type: 'bar',
+        height: 350,
+        zoom: { enabled: false },
+        toolbar: { show: false }
+      },
+      series: [{ name: 'Alert Data', data: alertData }],
+      xaxis: { type: 'datetime' },
+      yaxis: { title: { text: 'Value' } },
+      title: { text: 'Alert Sensor Data', align: 'center' }
+    };
+
+    const chartThreshold = new ApexCharts(document.querySelector("#thresholdChart"), optionsThresholdChart);
+    const chartAlert = new ApexCharts(document.querySelector("#alertChart"), optionsAlertChart);
     
-    /********************* KONFIGURASI MQTT *********************/
-    const client = mqtt.connect('wss://mqtt.eclipse.org:443');
-    client.on('connect', function() {
-      console.log('Connected to MQTT broker');
-      client.subscribe('sensor/+/data');
-    });
-    
-    client.on('message', function(topic, message) {
-      const data = JSON.parse(message.toString());
-      console.log('Data sensor diterima:', data);
-      
-      /********************* KONFIGURASI GAUGE *********************/
-      if (data.lpg !== undefined) {
-        gaugeLPG.updateOptions({ series: [data.lpg] });
-        alertData.push({ timestamp: Date.now(), lpg: data.lpg });
-      }
-      if (data.metana !== undefined) {
-        gaugeMetana.updateOptions({ series: [data.metana] });
-        alertData.push({ timestamp: Date.now(), metana: data.metana });
-      }
-      if (data.co !== undefined) {
-        gaugeCO.updateOptions({ series: [data.co] });
-        alertData.push({ timestamp: Date.now(), co: data.co });
-      }
-      if (data.amonia !== undefined) {
-        gaugeAmonia.updateOptions({ series: [data.amonia] });
-        alertData.push({ timestamp: Date.now(), amonia: data.amonia });
-      }
-      if (data.alkohol !== undefined) {
-        gaugeAlkohol.updateOptions({ series: [data.alkohol] });
-        alertData.push({ timestamp: Date.now(), alkohol: data.alkohol });
-      }
-      if (data.co2 !== undefined) {
-        gaugeCO2.updateOptions({ series: [data.co2] });
-        alertData.push({ timestamp: Date.now(), co2: data.co2 });
-      }
-      if (data.suhu !== undefined) {
-        gaugeSuhu.updateOptions({ series: [data.suhu] });
-        alertData.push({ timestamp: Date.now(), suhu: data.suhu });
-      }
-      
-      /********************* UPDATE CHART *********************/
-      updateAlertChart();
-      if (alertData.length > 10) alertData.shift();  // Pertahankan hanya 10 data terakhir
-    });
-    
-    loadLightsState();
+    chartThreshold.render();
+    chartAlert.render();
   </script>
 </body>
 </html>
