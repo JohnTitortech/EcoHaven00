@@ -180,37 +180,31 @@
   
   <script>
     /********************* KONFIGURASI FIREBASE *********************/
-    // Ganti konfigurasi berikut dengan konfigurasi project Firebase Anda.
     const firebaseConfig = {
-    apiKey: "AIzaSyAK3Lm-A2NTeW92HwPvOFnKhaq0cx9tjGQ",
-    authDomain: "ecohaven-36953.firebaseapp.com",
-    databaseURL: "https://ecohaven-36953-default-rtdb.asia-southeast1.firebasedatabase.app",
-    projectId: "ecohaven-36953",
-    storageBucket: "ecohaven-36953.firebasestorage.app",
-    messagingSenderId: "378716661675",
-    appId: "1:378716661675:web:d4e0a565f1cb6fe0d094ee"
+      apiKey: "AIzaSyAK3Lm-A2NTeW92HwPvOFnKhaq0cx9tjGQ",
+      authDomain: "ecohaven-36953.firebaseapp.com",
+      databaseURL: "https://ecohaven-36953-default-rtdb.asia-southeast1.firebasedatabase.app",
+      projectId: "ecohaven-36953",
+      storageBucket: "ecohaven-36953.firebasestorage.app",
+      messagingSenderId: "378716661675",
+      appId: "1:378716661675:web:d4e0a565f1cb6fe0d094ee"
     };
-    
     firebase.initializeApp(firebaseConfig);
     const database = firebase.database();
     
-    // Fungsi untuk menyimpan data ke Firebase
     function saveState(key, data) {
       database.ref(key).set(data);
     }
     
-    // Fungsi untuk memuat data dari Firebase dan menjalankan callback saat data berubah
     function loadState(key, callback) {
       database.ref(key).on('value', (snapshot) => {
         callback(snapshot.val());
       });
     }
-    
+
     /********************* KONFIGURASI ALERT CHART *********************/
-    // Data sensor yang melebihi batas (alertChart)
     let alertData = [];
     
-    // Batas maksimum sensor
     const limits = {
       lpg: 0.001,
       metana: 0.005,
@@ -220,8 +214,7 @@
       co2: 0.001,
       suhu: 35
     };
-    
-    // Inisialisasi chart instance
+
     let alertChartInstance = null;
     function updateAlertChart() {
       const labels = alertData.map(d => d.timestamp);
@@ -229,13 +222,13 @@
         name: sensor.toUpperCase(),
         data: alertData.map(d => d[sensor] || 0)
       }));
-    
+
       const options = {
         chart: { type: 'line', height: 300 },
         xaxis: { categories: labels },
         series: seriesData
       };
-    
+
       if (alertChartInstance) {
         alertChartInstance.updateOptions(options);
       } else {
@@ -268,8 +261,7 @@
         series: [0]
       });
     }
-    
-    // Inisialisasi gauge untuk sensor
+
     var gaugeLPG = initGauge("#gauge-lpg");
     gaugeLPG.render();
     var gaugeMetana = initGauge("#gauge-metana");
@@ -285,7 +277,6 @@
     var gaugeSuhu = initGauge("#gauge-suhu");
     gaugeSuhu.render();
     
-    // Data untuk thresholdChart (nilai sensor melebihi threshold)
     let thresholdData = [];
     var thresholdChart = new ApexCharts(document.querySelector("#thresholdChart"), {
       chart: {
@@ -307,11 +298,9 @@
     thresholdChart.render();
     
     /********************* LIGHT CONTROL *********************/
-    // Fungsi toggle untuk light control
     function toggleLight(lightNumber) {
       const card = document.getElementById(`light${lightNumber}`);
       let state;
-      // Ambil status tombol dari Firebase
       let lightsState = window.lightsState || { light1: "OFF", light2: "OFF", light3: "OFF", light4: "OFF" };
       if (card.classList.contains('on')) {
         card.classList.remove('on');
@@ -323,7 +312,6 @@
       lightsState['light' + lightNumber] = state;
       saveState('lightsState', lightsState);
       
-      // Publikasi pesan MQTT untuk relay
       const topic = `esp32/relay/${lightNumber}`;
       const payload = JSON.stringify({ relay: lightNumber, state: state });
       client.publish(topic, payload, function(err) {
@@ -334,108 +322,65 @@
         }
       });
     }
-    
-    // Fungsi untuk memuat status tombol light dari Firebase
+
     function loadLightsState() {
       loadState('lightsState', (data) => {
         window.lightsState = data || { light1: "OFF", light2: "OFF", light3: "OFF", light4: "OFF" };
         for (let i = 1; i <= 4; i++) {
           const card = document.getElementById(`light${i}`);
-          if (window.lightsState['light' + i] === "ON") {
+          if (window.lightsState[`light${i}`] === 'ON') {
             card.classList.add('on');
-          } else {
-            card.classList.remove('on');
           }
         }
       });
     }
     
-    /********************* MQTT CONNECTION & MESSAGE HANDLING *********************/
-    const client = mqtt.connect("wss://d58d2856910f44d9a1e8ef55cebf8e63.s1.eu.hivemq.cloud:8884/mqtt", {
-      username: "Farhan",
-      password: "Farhan_gaming20"
+    /********************* KONFIGURASI MQTT *********************/
+    const client = mqtt.connect('wss://mqtt.eclipse.org:443');
+    client.on('connect', function() {
+      console.log('Connected to MQTT broker');
+      client.subscribe('sensor/+/data');
     });
     
-    client.on("connect", function() {
-      console.log("Connected to HiveMQ with credentials");
-      client.subscribe("sensors/data", function(err) {
-        if (!err) {
-          console.log("Subscribed to sensors/data");
-        }
-      });
+    client.on('message', function(topic, message) {
+      const data = JSON.parse(message.toString());
+      console.log('Data sensor diterima:', data);
+      
+      /********************* KONFIGURASI GAUGE *********************/
+      if (data.lpg !== undefined) {
+        gaugeLPG.updateOptions({ series: [data.lpg] });
+        alertData.push({ timestamp: Date.now(), lpg: data.lpg });
+      }
+      if (data.metana !== undefined) {
+        gaugeMetana.updateOptions({ series: [data.metana] });
+        alertData.push({ timestamp: Date.now(), metana: data.metana });
+      }
+      if (data.co !== undefined) {
+        gaugeCO.updateOptions({ series: [data.co] });
+        alertData.push({ timestamp: Date.now(), co: data.co });
+      }
+      if (data.amonia !== undefined) {
+        gaugeAmonia.updateOptions({ series: [data.amonia] });
+        alertData.push({ timestamp: Date.now(), amonia: data.amonia });
+      }
+      if (data.alkohol !== undefined) {
+        gaugeAlkohol.updateOptions({ series: [data.alkohol] });
+        alertData.push({ timestamp: Date.now(), alkohol: data.alkohol });
+      }
+      if (data.co2 !== undefined) {
+        gaugeCO2.updateOptions({ series: [data.co2] });
+        alertData.push({ timestamp: Date.now(), co2: data.co2 });
+      }
+      if (data.suhu !== undefined) {
+        gaugeSuhu.updateOptions({ series: [data.suhu] });
+        alertData.push({ timestamp: Date.now(), suhu: data.suhu });
+      }
+      
+      /********************* UPDATE CHART *********************/
+      updateAlertChart();
+      if (alertData.length > 10) alertData.shift();  // Pertahankan hanya 10 data terakhir
     });
     
-    // Event handler MQTT: Update gauge, thresholdChart, dan alertChart serta simpan data ke Firebase
-    client.on("message", function(topic, message) {
-      try {
-        const data = JSON.parse(message.toString());
-        const timestamp = new Date().toLocaleString();
-        let exceeded = false;
-        
-        if (typeof data.lpg !== "undefined") {
-          gaugeLPG.updateSeries([data.lpg]);
-          if (data.lpg > limits.lpg) exceeded = true;
-          if (data.lpg > 50) {
-            let ts = new Date();
-            thresholdData.push([ts.getTime(), data.lpg]);
-            saveState('thresholdData', thresholdData);
-            thresholdChart.updateSeries([{ data: thresholdData }]);
-          }
-        }
-        if (typeof data.metana !== "undefined") {
-          gaugeMetana.updateSeries([data.metana]);
-          if (data.metana > limits.metana) exceeded = true;
-          if (data.metana > 50) {
-            let ts = new Date();
-            thresholdData.push([ts.getTime(), data.metana]);
-            saveState('thresholdData', thresholdData);
-            thresholdChart.updateSeries([{ data: thresholdData }]);
-          }
-        }
-        if (typeof data.CO !== "undefined") {
-          gaugeCO.updateSeries([data.CO]);
-          if (data.CO > limits.CO) exceeded = true;
-        }
-        if (typeof data.amonia !== "undefined") {
-          gaugeAmonia.updateSeries([data.amonia]);
-          if (data.amonia > limits.amonia) exceeded = true;
-        }
-        if (typeof data.alkohol !== "undefined") {
-          gaugeAlkohol.updateSeries([data.alkohol]);
-          if (data.alkohol > limits.alkohol) exceeded = true;
-        }
-        if (typeof data.co2 !== "undefined") {
-          gaugeCO2.updateSeries([data.co2]);
-          if (data.co2 > limits.co2) exceeded = true;
-        }
-        if (typeof data.suhu !== "undefined") {
-          gaugeSuhu.updateSeries([data.suhu]);
-          if (data.suhu > limits.suhu) exceeded = true;
-        }
-        
-        if (exceeded) {
-          alertData.push({ ...data, timestamp });
-          saveState('alertData', alertData);
-          updateAlertChart();
-        }
-      } catch (e) {
-        console.error("Error parsing MQTT message:", e);
-      }
-    });
-    
-    // Muat data yang tersimpan dari Firebase saat halaman dimuat
-    loadState('alertData', (data) => {
-      if (data) { 
-        alertData = data;
-        updateAlertChart();
-      }
-    });
-    loadState('thresholdData', (data) => {
-      if (data) {
-        thresholdData = data;
-        thresholdChart.updateSeries([{ data: thresholdData }]);
-      }
-    });
     loadLightsState();
   </script>
 </body>
