@@ -166,15 +166,9 @@
     </div>
   </div>
   
-  <!-- Grafik Threshold Chart (data sensor melebihi threshold) -->
-  <div class="section">
-    <h2>Grafik Data Sensor (Melebihi Batas)</h2>
-    <div id="thresholdChart"></div>
-  </div>
-  
   <!-- Grafik Alert Chart (data sensor berdasarkan batas sensor) -->
   <div class="section">
-    <h2>Grafik Data Sensor Alert</h2>
+    <h2>Grafik Data Sensor</h2>
     <div id="alertChart"></div>
   </div>
   
@@ -205,21 +199,6 @@
         callback(snapshot.val());
       });
     }
-    
-    /********************* KONFIGURASI ALERT CHART *********************/
-    // Data sensor yang melebihi batas (alertChart)
-    let alertData = [];
-    
-    // Batas maksimum sensor
-    const limits = {
-      lpg: 0.1,
-      metana: 0.5,
-      CO: 0.1,
-      amonia: 0.1,
-      alkohol: 0.1,
-      co2: 0.1,
-      suhu: 35
-    };
     
     // Inisialisasi chart instance
     let alertChartInstance = null;
@@ -302,7 +281,6 @@
         type: 'datetime',
         labels: { datetimeUTC: false, format: 'dd MMM HH:mm' }
       },
-      title: { text: 'Data Sensor Melebihi Batas' }
     });
     thresholdChart.render();
     
