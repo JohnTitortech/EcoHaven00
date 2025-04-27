@@ -105,8 +105,8 @@
     <h2>☣️ Toxic Gas</h2>
     <div class="dashboard">
       <div class="card">
-        <h3>NOx</h3>
-        <div id="gauge-nox"></div>
+        <h3>CO</h3>
+        <div id="gauge-CO"></div>
       </div>
       <div class="card">
         <h3>Amonia</h3>
@@ -212,13 +212,13 @@
     
     // Batas maksimum sensor
     const limits = {
-      lpg: 1.8,
-      metana: 5.3,
-      nox: 0.5,
-      amonia: 16,
-      alkohol: 1000,
-      co2: 5000,
-      suhu: 25
+      lpg: 0.1,
+      metana: 0.5,
+      CO: 0.1,
+      amonia: 0.1,
+      alkohol: 0.1,
+      co2: 0.1,
+      suhu: 35
     };
     
     // Inisialisasi chart instance
@@ -269,6 +269,7 @@
         yaxis: {
         min: 0,
         max: 2
+        }
       });
     }
     
@@ -277,8 +278,8 @@
     gaugeLPG.render();
     var gaugeMetana = initGauge("#gauge-metana");
     gaugeMetana.render();
-    var gaugeNOx = initGauge("#gauge-nox");
-    gaugeNOx.render();
+    var gaugeCO = initGauge("#gauge-CO");
+    gaugeCO.render();
     var gaugeAmonia = initGauge("#gauge-amonia");
     gaugeAmonia.render();
     var gaugeAlkohol = initGauge("#gauge-alkohol");
@@ -395,9 +396,9 @@
             thresholdChart.updateSeries([{ data: thresholdData }]);
           }
         }
-        if (typeof data.nox !== "undefined") {
-          gaugeNOx.updateSeries([data.nox]);
-          if (data.nox > limits.nox) exceeded = true;
+        if (typeof data.CO !== "undefined") {
+          gaugeCO.updateSeries([data.CO]);
+          if (data.CO > limits.CO) exceeded = true;
         }
         if (typeof data.amonia !== "undefined") {
           gaugeAmonia.updateSeries([data.amonia]);
