@@ -46,40 +46,6 @@
       margin-bottom: 10px;
       color: #5D4037;
     }
-    /* --- Bagian Tombol Light 1-4 --- */
-    .light-container {
-      display: flex;
-      justify-content: center;
-      gap: 15px;
-      flex-wrap: wrap;
-      margin-bottom: 40px;
-    }
-    .light-card {
-      width: 70px;
-      height: 70px;
-      border-radius: 15px;
-      background: #5D4037;       /* Warna default OFF */
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      color: #fff;
-      cursor: pointer;
-      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.4);
-      transition: background 0.3s;
-    }
-    .light-card.on {
-      background: #FF9800;       /* Warna jika ON */
-    }
-    .light-icon {
-      width: 48px;
-      height: 48px;
-    }
-    .light-label {
-      margin-top: 8px;
-      font-size: 12px;
-      text-align: center;
-    }
   </style>
 </head>
 <body>
@@ -134,55 +100,16 @@
     </div>
   </div>
   
-  <!-- Light Control Section -->
-  <div class="light-container">
-    <div class="light-card" id="light1" onclick="toggleLight(1)">
-      <svg class="light-icon" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="8" stroke-linecap="round" stroke-linejoin="round">
-        <line x1="32" y1="8" x2="32" y2="24"/>
-        <path d="M44 20 A20 20 0 1 1 20 20"/>
-      </svg>
-      <div class="light-label">Light 1</div>
-    </div>
-    <div class="light-card" id="light2" onclick="toggleLight(2)">
-      <svg class="light-icon" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="8" stroke-linecap="round" stroke-linejoin="round">
-        <line x1="32" y1="8" x2="32" y2="24"/>
-        <path d="M44 20 A20 20 0 1 1 20 20"/>
-      </svg>
-      <div class="light-label">Light 2</div>
-    </div>
-    <div class="light-card" id="light3" onclick="toggleLight(3)">
-      <svg class="light-icon" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="8" stroke-linecap="round" stroke-linejoin="round">
-        <line x1="32" y1="8" x2="32" y2="24"/>
-        <path d="M44 20 A20 20 0 1 1 20 20"/>
-      </svg>
-      <div class="light-label">Light 3</div>
-    </div>
-    <div class="light-card" id="light4" onclick="toggleLight(4)">
-      <svg class="light-icon" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="8" stroke-linecap="round" stroke-linejoin="round">
-        <line x1="32" y1="8" x2="32" y2="24"/>
-        <path d="M44 20 A20 20 0 1 1 20 20"/>
-      </svg>
-      <div class="light-label">Light 4</div>
-    </div>
-  </div>
-  
-  <!-- Grafik Alert Chart (data sensor berdasarkan batas sensor) -->
-  <div class="section">
-    <h2>Grafik Data Sensor</h2>
-    <div id="alertChart"></div>
-  </div>
-  
   <script>
     /********************* KONFIGURASI FIREBASE *********************/
-    // Ganti konfigurasi berikut dengan konfigurasi project Firebase Anda.
     const firebaseConfig = {
-    apiKey: "AIzaSyAK3Lm-A2NTeW92HwPvOFnKhaq0cx9tjGQ",
-    authDomain: "ecohaven-36953.firebaseapp.com",
-    databaseURL: "https://ecohaven-36953-default-rtdb.asia-southeast1.firebasedatabase.app",
-    projectId: "ecohaven-36953",
-    storageBucket: "ecohaven-36953.firebasestorage.app",
-    messagingSenderId: "378716661675",
-    appId: "1:378716661675:web:d4e0a565f1cb6fe0d094ee"
+      apiKey: "AIzaSyAK3Lm-A2NTeW92HwPvOFnKhaq0cx9tjGQ",
+      authDomain: "ecohaven-36953.firebaseapp.com",
+      databaseURL: "https://ecohaven-36953-default-rtdb.asia-southeast1.firebasedatabase.app",
+      projectId: "ecohaven-36953",
+      storageBucket: "ecohaven-36953.firebasestorage.app",
+      messagingSenderId: "378716661675",
+      appId: "1:378716661675:web:d4e0a565f1cb6fe0d094ee"
     };
     
     firebase.initializeApp(firebaseConfig);
@@ -193,37 +120,7 @@
       database.ref(key).set(data);
     }
     
-    // Fungsi untuk memuat data dari Firebase dan menjalankan callback saat data berubah
-    function loadState(key, callback) {
-      database.ref(key).on('value', (snapshot) => {
-        callback(snapshot.val());
-      });
-    }
-    
-    // Inisialisasi chart instance
-    let alertChartInstance = null;
-    function updateAlertChart() {
-      const labels = alertData.map(d => d.timestamp);
-      const seriesData = Object.keys(limits).map(sensor => ({
-        name: sensor.toUpperCase(),
-        data: alertData.map(d => d[sensor] || 0)
-      }));
-    
-      const options = {
-        chart: { type: 'line', height: 300 },
-        xaxis: { categories: labels },
-        series: seriesData
-      };
-    
-      if (alertChartInstance) {
-        alertChartInstance.updateOptions(options);
-      } else {
-        alertChartInstance = new ApexCharts(document.querySelector("#alertChart"), options);
-        alertChartInstance.render();
-      }
-    }
-    
-    /********************* KONFIGURASI GAUGE & THRESHOLD CHART *********************/
+    /********************* KONFIGURASI GAUGE *********************/
     function initGauge(selector) {
       return new ApexCharts(document.querySelector(selector), {
         chart: { type: 'radialBar', height: 250 },
@@ -264,70 +161,6 @@
     var gaugeSuhu = initGauge("#gauge-suhu");
     gaugeSuhu.render();
     
-    // Data untuk thresholdChart (nilai sensor melebihi threshold)
-    let thresholdData = [];
-    var thresholdChart = new ApexCharts(document.querySelector("#thresholdChart"), {
-      chart: {
-        type: 'line',
-        height: 300,
-        animations: {
-          enabled: true,
-          easing: 'linear',
-          dynamicAnimation: { speed: 1000 }
-        }
-      },
-      series: [{ name: 'Nilai Sensor', data: thresholdData }],
-      xaxis: {
-        type: 'datetime',
-        labels: { datetimeUTC: false, format: 'dd MMM HH:mm' }
-      },
-    });
-    thresholdChart.render();
-    
-    /********************* LIGHT CONTROL *********************/
-    // Fungsi toggle untuk light control
-    function toggleLight(lightNumber) {
-      const card = document.getElementById(`light${lightNumber}`);
-      let state;
-      // Ambil status tombol dari Firebase
-      let lightsState = window.lightsState || { light1: "OFF", light2: "OFF", light3: "OFF", light4: "OFF" };
-      if (card.classList.contains('on')) {
-        card.classList.remove('on');
-        state = "OFF";
-      } else {
-        card.classList.add('on');
-        state = "ON";
-      }
-      lightsState['light' + lightNumber] = state;
-      saveState('lightsState', lightsState);
-      
-      // Publikasi pesan MQTT untuk relay
-      const topic = `esp32/relay/${lightNumber}`;
-      const payload = JSON.stringify({ relay: lightNumber, state: state });
-      client.publish(topic, payload, function(err) {
-        if(err) {
-          console.error("Gagal mempublikasikan pesan:", err);
-        } else {
-          console.log(`Pesan diterbitkan ke ${topic}: ${payload}`);
-        }
-      });
-    }
-    
-    // Fungsi untuk memuat status tombol light dari Firebase
-    function loadLightsState() {
-      loadState('lightsState', (data) => {
-        window.lightsState = data || { light1: "OFF", light2: "OFF", light3: "OFF", light4: "OFF" };
-        for (let i = 1; i <= 4; i++) {
-          const card = document.getElementById(`light${i}`);
-          if (window.lightsState['light' + i] === "ON") {
-            card.classList.add('on');
-          } else {
-            card.classList.remove('on');
-          }
-        }
-      });
-    }
-    
     /********************* MQTT CONNECTION & MESSAGE HANDLING *********************/
     const client = mqtt.connect("wss://d58d2856910f44d9a1e8ef55cebf8e63.s1.eu.hivemq.cloud:8884/mqtt", {
       username: "Farhan",
@@ -343,78 +176,36 @@
       });
     });
     
-    // Event handler MQTT: Update gauge, thresholdChart, dan alertChart serta simpan data ke Firebase
+    // Event handler MQTT: Update gauge
     client.on("message", function(topic, message) {
       try {
         const data = JSON.parse(message.toString());
-        const timestamp = new Date().toLocaleString();
-        let exceeded = false;
         
         if (typeof data.lpg !== "undefined") {
           gaugeLPG.updateSeries([data.lpg]);
-          if (data.lpg > limits.lpg) exceeded = true;
-          if (data.lpg > 50) {
-            let ts = new Date();
-            thresholdData.push([ts.getTime(), data.lpg]);
-            saveState('thresholdData', thresholdData);
-            thresholdChart.updateSeries([{ data: thresholdData }]);
-          }
         }
         if (typeof data.metana !== "undefined") {
           gaugeMetana.updateSeries([data.metana]);
-          if (data.metana > limits.metana) exceeded = true;
-          if (data.metana > 50) {
-            let ts = new Date();
-            thresholdData.push([ts.getTime(), data.metana]);
-            saveState('thresholdData', thresholdData);
-            thresholdChart.updateSeries([{ data: thresholdData }]);
-          }
         }
         if (typeof data.CO !== "undefined") {
           gaugeCO.updateSeries([data.CO]);
-          if (data.CO > limits.CO) exceeded = true;
         }
         if (typeof data.amonia !== "undefined") {
           gaugeAmonia.updateSeries([data.amonia]);
-          if (data.amonia > limits.amonia) exceeded = true;
         }
         if (typeof data.alkohol !== "undefined") {
           gaugeAlkohol.updateSeries([data.alkohol]);
-          if (data.alkohol > limits.alkohol) exceeded = true;
         }
         if (typeof data.co2 !== "undefined") {
           gaugeCO2.updateSeries([data.co2]);
-          if (data.co2 > limits.co2) exceeded = true;
         }
         if (typeof data.suhu !== "undefined") {
           gaugeSuhu.updateSeries([data.suhu]);
-          if (data.suhu > limits.suhu) exceeded = true;
-        }
-        
-        if (exceeded) {
-          alertData.push({ ...data, timestamp });
-          saveState('alertData', alertData);
-          updateAlertChart();
         }
       } catch (e) {
         console.error("Error parsing MQTT message:", e);
       }
     });
-    
-    // Muat data yang tersimpan dari Firebase saat halaman dimuat
-    loadState('alertData', (data) => {
-      if (data) { 
-        alertData = data;
-        updateAlertChart();
-      }
-    });
-    loadState('thresholdData', (data) => {
-      if (data) {
-        thresholdData = data;
-        thresholdChart.updateSeries([{ data: thresholdData }]);
-      }
-    });
-    loadLightsState();
   </script>
 </body>
 </html>
